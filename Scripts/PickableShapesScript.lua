@@ -1,7 +1,6 @@
 --[[
-    Script created by MistGo https://open.spotify.com/album/6We8TMnw9AXY4jyx1h8Ozx?si=m4NwpIp3TTiBAMPkjxg3Nw
+    Script created by MistGo
 ]]
-
 if PickableShapes then return end
 PickableShapes = class()
 local isSurvival = nil
@@ -14,16 +13,12 @@ function PickableShapes:server_onCreate()
     print("------------------------Pickable Shapes for " .. GameMode .. " Server loaded.------------------------")
 end
 
-function PickableShapes:client_onCreate()
-    if not PickableShapes.tool:isLocal() then return end
-end
-
 if not commandsBind then
     local oldBindCommand = sm.game.bindChatCommand
     local function bindCommandHook(command, params, callback, help)
         oldBindCommand(command, params, callback, help)
         if not added then
-            oldBindCommand("/get", {}, "cl_onChatCommand", "Aim at the desired block and enter the following command to place it in the active hotbar slot.")
+            oldBindCommand("/get", {}, "cl_onChatCommand", "Aim at the desired block and enter the following command to get it in the active hotbar slot.")
             added = true
         end
     end
@@ -34,7 +29,7 @@ if not commandsBind then
     local function worldEventHook(world, callback, params)
         if params then
             if params[1] == "/get" then
-                sm.event.sendToTool(PickableShapes.tool, "sv_n_tunnel")
+                sm.event.sendToTool(PickableShapes.tool, "sv_n_tunnel", {player = params.player})
                 return
             end
         end
@@ -44,18 +39,17 @@ if not commandsBind then
     commandsBind = true
 end
 
-function PickableShapes:sv_n_tunnel()
-    self.network:sendToClients("cl_n_getItem")
+function PickableShapes:sv_n_tunnel(data)
+    local client = data.player
+    self.network:sendToClient(client, "cl_n_getItem")
 end
 
 function PickableShapes:sv_n_changeItem(args)
     local current_slot, hotbar, inventory, uuid = args.slot, args.hotbar, args.inventory, args.uuid
 
-    print(current_slot, hotbar , inventory , uuid)
-
     if not isSurvival then -- Creative
         local cur_item = hotbar:getItem(current_slot)
-
+        
         sm.container.beginTransaction()
         sm.container.spendFromSlot(hotbar, current_slot, cur_item.uuid, cur_item.quantity, true)
         sm.container.collectToSlot(hotbar, current_slot, uuid, 1, true)
