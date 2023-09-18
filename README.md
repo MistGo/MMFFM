@@ -1,9 +1,4 @@
-# Pickable-Shapes
+## Description
+This mod adds the function of obtaining the desired block without using the inventory. (similar to the middle mouse button in Minecraft)
 
-<h3 align="left">
-  Link:
-  <a href="https://steamcommunity.com/sharedfiles/filedetails/?id=3002663600">
-    <code>Pickable Shapes</code>
-  </a>
-</h3>
-<br>
+[Steam Workshop Link](https://steamcommunity.com/sharedfiles/filedetails/?id=2022198450)
