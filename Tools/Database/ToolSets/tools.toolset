@@ -1,17 +1,13 @@
 {
    "toolList" : [
       {
-         "autoTool" : true,
-         "showInInventory" : false,
          "name" : "Pickable Shapes Script Loader",
+         "uuid" : "3e3cb084-bb56-4910-a810-c5dcd6e45c14",
          "previewRenderable" : "$CONTENT_DATA/Renderables/Pizdec.rend",
          "previewRotation" : [ 1, 0, 0, 0, 0, -1, 0, 1, 0 ],
-         "script" : {
-            "class" : "PickableShapes",
-            "data" : {},
-            "file" : "$CONTENT_DATA/Scripts/PickableShapesScript.lua"
-         },
-         "uuid" : "3e3cb084-bb56-4910-a810-c5dcd6e45c14"
+         "showInInventory" : false,
+         "autoTool" : true,
+         "script" : { "class" : "PickableShapes", "file" : "$CONTENT_DATA/Scripts/PickableShapesScript.lua", "data": {}}
       }
    ]
 }

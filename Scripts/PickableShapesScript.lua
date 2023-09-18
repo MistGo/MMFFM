@@ -1,6 +1,7 @@
 --[[
     Script created by MistGo
 ]]
+
 if PickableShapes then return end
 PickableShapes = class()
 local isSurvival = nil
@@ -39,9 +40,8 @@ if not commandsBind then
     commandsBind = true
 end
 
-function PickableShapes:sv_n_tunnel(data)
-    local client = data.player
-    self.network:sendToClient(client, "cl_n_getItem")
+function PickableShapes:sv_n_tunnel(player)
+    self.network:sendToClient(player.player, "cl_n_getItem")
 end
 
 function PickableShapes:sv_n_changeItem(args)
