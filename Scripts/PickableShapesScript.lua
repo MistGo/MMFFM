@@ -1,17 +1,74 @@
 --[[
     Script created by MistGo
+    Updated 10.11.2023
 ]]
 
-if PickableShapes then return end
 PickableShapes = class()
 local isSurvival = nil
 
 function PickableShapes:server_onCreate()
     PickableShapes.tool = self.tool
     isSurvival = sm.game.getLimitedInventory()
-    local GameMode = isSurvival and "Survival" or "Creative"  -- local GameMode = isSurvival and true or false
+    local GameMode = isSurvival and "Survival" or "Creative"
 
-    print("------------------------Pickable Shapes for " .. GameMode .. " Server loaded.------------------------")
+    print("Pickable Shapes for " .. GameMode .. " Server loaded.")
+end
+
+function PickableShapes:server_onRefresh()
+    PickableShapes.tool = self.tool
+    print("Pickable Shapes refreshed.")
+end
+
+function PickableShapes:sv_tunnel(player)
+    self.network:sendToClient(player.player, "cl_getItem")
+end
+
+function PickableShapes:sv_changeItem(args)
+    local current_slot, hotbar, inventory, uuid = args.slot, args.hotbar, args.inventory, args.uuid
+
+    if not isSurvival then -- Creative
+        local cur_item = hotbar:getItem(current_slot)
+        local found = false
+        for slot = 0, 9 do
+            local items = hotbar:getItem(slot)
+            if items and (items.uuid == uuid) then
+                sm.container.beginTransaction()
+                sm.container.swap(hotbar, slot, hotbar, current_slot)
+                sm.container.endTransaction()
+                found = true
+                break
+            end
+        end
+        if not found then
+            sm.container.beginTransaction()
+            sm.container.spendFromSlot(hotbar, current_slot, cur_item.uuid, cur_item.quantity, true)
+            sm.container.collectToSlot(hotbar, current_slot, uuid, 1, true)
+            sm.container.endTransaction()
+        end
+    else -- Survival
+        for slot = 0, 39 do
+            local items = inventory:getItem(slot)
+            if items and (items.uuid == uuid) then
+                sm.container.beginTransaction()
+                sm.container.swap(inventory, slot, inventory, current_slot)
+                sm.container.endTransaction()
+            end
+        end
+    end
+end
+
+function PickableShapes:cl_getItem()
+    local slot = sm.localPlayer.getSelectedHotbarSlot()
+    local container = isSurvival and sm.localPlayer.getInventory() or sm.localPlayer.getHotbar()
+    local bool, result = sm.localPlayer.getRaycast(5, sm.localPlayer.getRaycastStart(), sm.localPlayer.getDirection())
+
+    if bool and (result.type == "body") then
+        local shape = result:getShape().uuid
+        if sm.exists(shape) then
+            local args = { hotbar = not isSurvival and container or nil, inventory = isSurvival and container or nil, slot = slot, uuid = shape }
+            self.network:sendToServer("sv_changeItem", args)
+        end
+    end
 end
 
 if not commandsBind then
@@ -30,7 +87,7 @@ if not commandsBind then
     local function worldEventHook(world, callback, params)
         if params then
             if params[1] == "/get" then
-                sm.event.sendToTool(PickableShapes.tool, "sv_n_tunnel", {player = params.player})
+                sm.event.sendToTool(PickableShapes.tool, "sv_tunnel", { player = params.player })
                 return
             end
         end
@@ -38,44 +95,4 @@ if not commandsBind then
     end
     sm.event.sendToWorld = worldEventHook
     commandsBind = true
-end
-
-function PickableShapes:sv_n_tunnel(player)
-    self.network:sendToClient(player.player, "cl_n_getItem")
-end
-
-function PickableShapes:sv_n_changeItem(args)
-    local current_slot, hotbar, inventory, uuid = args.slot, args.hotbar, args.inventory, args.uuid
-
-    if not isSurvival then -- Creative
-        local cur_item = hotbar:getItem(current_slot)
-        
-        sm.container.beginTransaction()
-        sm.container.spendFromSlot(hotbar, current_slot, cur_item.uuid, cur_item.quantity, true)
-        sm.container.collectToSlot(hotbar, current_slot, uuid, 1, true)
-        sm.container.endTransaction()
-    else -- Survival
-        for slot = 0, 39 do
-            local items = inventory:getItem(slot)
-            if items and (items.uuid == uuid) then
-                sm.container.beginTransaction()
-                sm.container.swap(inventory, slot, inventory, current_slot)
-                sm.container.endTransaction()
-            end
-        end
-    end
-end
-
-function PickableShapes:cl_n_getItem()
-    local slot = sm.localPlayer.getSelectedHotbarSlot()
-    local container = isSurvival and sm.localPlayer.getInventory() or sm.localPlayer.getHotbar()
-    local bool, result = sm.localPlayer.getRaycast(5, sm.localPlayer.getRaycastStart(), sm.localPlayer.getDirection())
-    
-    if bool and (result.type == "body") then
-        local shape = result:getShape().uuid
-        if sm.exists(shape) then
-            local args = { hotbar = not isSurvival and container or nil, inventory = isSurvival and container or nil, slot = slot, uuid = shape }
-            self.network:sendToServer("sv_n_changeItem", args)
-        end
-    end
 end

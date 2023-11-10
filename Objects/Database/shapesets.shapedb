@@ -1,3 +1,3 @@
 {
-   "shapeSetList" : [ "$CONTENT_DATA/Objects/Database/ShapeSets/nothing.shapeset" ]
+   "shapeSetList" : [ "$CONTENT_DATA/Objects/Database/ShapeSets/empty.shapeset" ]
 }
