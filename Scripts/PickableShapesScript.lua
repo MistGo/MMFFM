@@ -1,10 +1,11 @@
 --[[
     Script created by MistGo
-    Updated 25.03.2024
+    Updated 28.03.2024
 ]]
 
 PickableShapes = class()
 local isSurvival = nil
+local oldstate = false
 
 function PickableShapes:server_onCreate()
     PickableShapes.tool = self.tool
@@ -19,14 +20,33 @@ function PickableShapes:server_onRefresh()
     print("Pickable Shapes refreshed.")
 end
 
+function PickableShapes:client_onCreate()
+    if better and better.isAvailable() then
+        if sm.gui.getCurrentLanguage() == "Russian" then sm.gui.chatMessage("[Pickable Shapes]: Похоже, у вас установлен #2adccbBetter API#FFFFFF. Вы можете использовать среднюю кнопку мыши чтобы получать блоки, не заходя в инвентарь. Если вам нужны дополнительные страницы хотбара, то используйте команду /get [номер страницы].") else sm.gui.chatMessage("#5090f2[Pickable Shapes]: #FFFFFFLooks like you have a installed #2adccbBetter API. #FFFFFFYou can use the middle mouse button to get the block you are looking at. If you need additional hotbar pages, then use the /get [page number] command.") end
+    else
+        if sm.gui.getCurrentLanguage() == "Russian" then sm.gui.chatMessage("[Pickable Shapes]: #FFFFFFУ вас не установлен #2adccbBetter API#FFFFFF, но вы всё равно можете использовать команду /get.\nhttps://steamcommunity.com/sharedfiles/filedetails/?id=3177944610") else sm.gui.chatMessage("[Pickable Shapes]: You don't have installed #2adccbBetter API#FFFFFF, but you can still use /get command.\nhttps://steamcommunity.com/sharedfiles/filedetails/?id=3177944610\n(Better API is optional)") end
+    end
+end
+
+function PickableShapes:client_onFixedUpdate()
+    if better and better.isAvailable() then
+        local state = better.mouse.isCenter()
+        if state ~= oldstate then
+            if state then
+                player = sm.localPlayer.getPlayer()
+                sm.event.sendToTool(PickableShapes.tool, "cl_getItem", { hotbar_page = 1 })
+            end
+            oldstate = state
+        end
+    end
+end
+
 function PickableShapes:sv_tunnel(args)
     self.network:sendToClient(args.player, "cl_getItem", {hotbar_page = args.hotbar_page})
 end
 
 function PickableShapes:sv_changeItem(args)
     local current_slot, max_slot, hotbar, hotbar_page, inventory, uuid = args.slot, 9, args.hotbar, args.hotbar_page, args.inventory, args.uuid
-
-    print(hotbar_page)
 
     if hotbar_page == nil then
     elseif hotbar_page == 2 then
@@ -79,6 +99,7 @@ function PickableShapes:cl_getItem(args)
         if sm.exists(shape) then
             local args = { hotbar = not isSurvival and container or nil, inventory = isSurvival and container or nil, slot = slot, uuid = shape, hotbar_page = not isSurvival and hotbar_page or nil }
             self.network:sendToServer("sv_changeItem", args)
+            sm.particle.createParticle("construct_welding", result.pointWorld)
         end
     end
 end
