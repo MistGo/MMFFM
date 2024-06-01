@@ -1,6 +1,6 @@
 --[[
-    Script created by MistGo
-    Updated 12.05.2024
+	Copyright (c) 2024
+	MistGo
 ]]
 
 MMFFM = class()
@@ -12,25 +12,13 @@ function MMFFM:server_onCreate()
 
     local GameMode = isSurvival and "Survival" or "Creative"
     print("MMFFM for " .. GameMode .. " loaded.")
+    sm.gui.chatMessage("#0098EA[MMFFM]#FFFFFF Use #0098EA/get #FFFFFFto obtain the required block without opening the inventory.")
 end
 
 function MMFFM:server_onRefresh()
     MMFFM.tool = self.tool
     isSurvival = sm.game.getLimitedInventory()
-
     print("MMFFM refreshed.")
-end
-
-function MMFFM:client_onFixedUpdate()
-    if better and better.isAvailable() then
-        local state = better.mouse.isCenter()
-        if state ~= oldstate then
-            if state then
-                self.network:sendToServer("sv_tunnel", { player = sm.localPlayer.getPlayer(), hotbar_page = 1 })
-            end
-            oldstate = state
-        end
-    end
 end
 
 function MMFFM:sv_changeItem(args)
