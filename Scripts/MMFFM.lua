@@ -26,8 +26,10 @@ function MMFFM:sv_changeItem(args)
 
     if hotbar_page == nil then
     elseif hotbar_page == 2 then
+        min_slot = 10
         current_slot = current_slot + 10
     elseif hotbar_page == 3 then
+        min_slot = 20
         current_slot = current_slot + 20
     elseif hotbar_page > 3 or hotbar_page < 1 then else end
 
