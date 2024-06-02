@@ -5,6 +5,7 @@
 
 MMFFM = class()
 local isSurvival = nil
+local defaultHotbarPage = 1
 
 function MMFFM:server_onCreate()
     MMFFM.tool = self.tool
@@ -12,17 +13,16 @@ function MMFFM:server_onCreate()
 
     local GameMode = isSurvival and "Survival" or "Creative"
     print("MMFFM for " .. GameMode .. " loaded.")
-    sm.gui.chatMessage("#0098EA[MMFFM]#FFFFFF Use #0098EA/get #FFFFFFto obtain the required block without opening the inventory.")
+    sm.gui.chatMessage("#0098EA[MMFFM]#FFFFFF Use #0098EA/get #FFFFFFto obtain the required block without opening the inventory. You can also switch between hotbar pages, just write /get #0098EA[1/2/3]#FFFFFF")
 end
 
 function MMFFM:server_onRefresh()
     MMFFM.tool = self.tool
     isSurvival = sm.game.getLimitedInventory()
-    print("MMFFM refreshed.")
 end
 
 function MMFFM:sv_changeItem(args)
-    local current_slot, hotbar, hotbar_page, inventory, uuid = args.slot, args.hotbar, args.hotbar_page, args.inventory, args.uuid
+    local min_slot, current_slot, hotbar, hotbar_page, inventory, uuid = 0, args.slot, args.hotbar, args.hotbar_page, args.inventory, args.uuid
 
     if hotbar_page == nil then
     elseif hotbar_page == 2 then
@@ -34,19 +34,35 @@ function MMFFM:sv_changeItem(args)
     if not isSurvival then -- Creative
         local cur_item = hotbar:getItem(current_slot)
         local found = false
-        for slot = 0, (hotbar:getSize() - 1) do
+        local isEmpty, emptySlot = false, 0
+        for slot = min_slot, (hotbar:getSize() - 1) do
             local items = hotbar:getItem(slot)
             if items and (items.uuid == uuid) then
-                sm.container.beginTransaction()
-                sm.container.swap(hotbar, slot, hotbar, current_slot)
-                sm.container.endTransaction()
+                if isEmpty then
+                    sm.container.beginTransaction()
+                    sm.container.swap(hotbar, current_slot, hotbar, emptySlot)
+                    sm.container.swap(hotbar, slot, hotbar, current_slot)
+                    sm.container.endTransaction()
+                else
+                    sm.container.beginTransaction()
+                    sm.container.swap(hotbar, slot, hotbar, current_slot)
+                    sm.container.endTransaction()
+                end
                 found = true
                 break
+            elseif items and not isEmpty and (items.uuid == sm.uuid.new("00000000-0000-0000-0000-000000000000")) then
+                isEmpty = true
+                emptySlot = slot
             end
         end
-        if not found then
+        if not found and not isEmpty then
             sm.container.beginTransaction()
             sm.container.spendFromSlot(hotbar, current_slot, cur_item.uuid, cur_item.quantity, true)
+            sm.container.collectToSlot(hotbar, current_slot, uuid, 1, true)
+            sm.container.endTransaction()
+        elseif not found and isEmpty then
+            sm.container.beginTransaction()
+            sm.container.swap(hotbar, current_slot, hotbar, emptySlot)
             sm.container.collectToSlot(hotbar, current_slot, uuid, 1, true)
             sm.container.endTransaction()
         end
@@ -74,12 +90,22 @@ function MMFFM:cl_getItem(params)
         if sm.exists(shape) then
             local args = { hotbar = not isSurvival and container or nil, inventory = isSurvival and container or nil, slot = slot, uuid = shape.uuid, hotbar_page = not isSurvival and hotbar_page or nil }
             self.network:sendToServer("sv_changeItem", args)
-            sm.particle.createParticle("p_tool_multiknife_refine_hit_metal", result.pointWorld)
+            sm.particle.createParticle("p_tool_multiknife_refine_hit_metal", result.pointWorld + (result.normalWorld * 0.05))
+        end
+    elseif bool and (result.type == "joint") then
+        local joint = result:getJoint()
+        if sm.exists(joint) then
+            local args = { hotbar = not isSurvival and container or nil, inventory = isSurvival and container or nil, slot = slot, uuid = joint.uuid, hotbar_page = not isSurvival and hotbar_page or nil }
+            self.network:sendToServer("sv_changeItem", args)
+            sm.particle.createParticle("p_barrier_impact", result.pointWorld + (result.normalWorld * 0.05))
         end
     end
 end
 
 function MMFFM:sv_tunnel(params)
+    if params.hotbar_page ~= nil then
+        defaultHotbarPage = params.hotbar_page
+    end
     self.network:sendToClient(params.player, "cl_getItem", { hotbar_page = params.hotbar_page })
 end
 
@@ -97,7 +123,7 @@ if not commandsBind then
     local function worldEventHook(world, callback, params)
         if params then
             if params[1] == "/get" then
-                sm.event.sendToTool(MMFFM.tool, "sv_tunnel", { player = params.player, hotbar_page = (params[2] or 1) })
+                sm.event.sendToTool(MMFFM.tool, "sv_tunnel", { player = params.player, hotbar_page = (params[2] or defaultHotbarPage) })
                 return
             end
         end
